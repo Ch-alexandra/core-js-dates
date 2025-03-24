@@ -137,7 +137,7 @@ function isDateInPeriod(date, period) {
  * '1999-01-05T02:20:00.000Z' => '1/5/1999, 2:20:00 AM'
  * '2010-12-15T22:59:00.000Z' => '12/15/2010, 10:59:00 PM'
  */
-function formatDate(date) {
+function formatScheduleDate(date) {
   const thisDate = new Date(date);
   const month = thisDate.getUTCMonth() + 1;
   const day = thisDate.getUTCDate();
@@ -212,8 +212,29 @@ function getWeekNumberByDate(date) {
  * Date(2024, 0, 13) => Date(2024, 8, 13)
  * Date(2023, 1, 1) => Date(2023, 9, 13)
  */
-function getNextFridayThe13th(/* date */) {
-  throw new Error('Not implemented');
+function getNextFridayThe13th(date) {
+  const startDate = new Date(date);
+
+  startDate.setDate(13);
+  if (startDate <= date) {
+    startDate.setMonth(startDate.getMonth() + 1);
+    startDate.setDate(13);
+  }
+
+  const maxIterations = 120;
+  let iterations = 0;
+
+  while (iterations < maxIterations) {
+    if (startDate.getDay() === 5) {
+      return new Date(startDate);
+    }
+
+    startDate.setMonth(startDate.getMonth() + 1);
+    startDate.setDate(13);
+    iterations += 1;
+  }
+
+  return false;
 }
 
 /**
@@ -249,8 +270,34 @@ function getQuarter(date) {
  * { start: '01-01-2024', end: '15-01-2024' }, 1, 3 => ['01-01-2024', '05-01-2024', '09-01-2024', '13-01-2024']
  * { start: '01-01-2024', end: '10-01-2024' }, 1, 1 => ['01-01-2024', '03-01-2024', '05-01-2024', '07-01-2024', '09-01-2024']
  */
-function getWorkSchedule(/* period, countWorkDays, countOffDays */) {
-  throw new Error('Not implemented');
+function getWorkSchedule(period, countWorkDays, countOffDays) {
+  const [startDay, startMonth, startYear] = period.start.split('-').map(Number);
+  const [endDay, endMonth, endYear] = period.end.split('-').map(Number);
+
+  const start = new Date(startYear, startMonth - 1, startDay);
+  const end = new Date(endYear, endMonth - 1, endDay);
+
+  const schedule = [];
+  const current = new Date(start);
+  let cycleDay = 0;
+
+  while (current <= end) {
+    if (cycleDay < countWorkDays) {
+      const day = String(current.getDate()).padStart(2, '0');
+      const month = String(current.getMonth() + 1).padStart(2, '0');
+      const year = current.getFullYear();
+      schedule.push(`${day}-${month}-${year}`);
+    }
+
+    cycleDay += 1;
+    if (cycleDay === countWorkDays + countOffDays) {
+      cycleDay = 0;
+    }
+
+    current.setDate(current.getDate() + 1);
+  }
+
+  return schedule;
 }
 
 /**
@@ -278,7 +325,7 @@ module.exports = {
   getCountDaysInMonth,
   getCountDaysOnPeriod,
   isDateInPeriod,
-  formatDate,
+  formatDate: formatScheduleDate,
   getCountWeekendsInMonth,
   getWeekNumberByDate,
   getNextFridayThe13th,
